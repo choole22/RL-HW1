@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 class GoalVsHoleEnv(Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, size=4, gamma=0.9, epsilon=1, epsilon_decay=1, epsilon_min=0.1):
+    def __init__(self, render_mode=None, size=4, gamma=0.9, epsilon=1, epsilon_decay=0.999, epsilon_min=0.1):
         self.size = size
         self.window_size = 512
         self.gamma = gamma  # discount factor
@@ -130,8 +130,49 @@ class GoalVsHoleEnv(Env):
         elif terminated:  # if in hole
             reward = -100
             self.total_holes += 1
+
         else:  # non-terminal state
             reward = 0
+
+        # update q-table
+        self._q_table[self._curr_state][action] = reward + self.gamma * np.amax(self._q_table[self._next_state])
+
+        # update agent_location
+        self._agent_location = self._agent_next_location
+
+        self._prev_state = self._curr_state
+        if np.array_equal(self._agent_location, np.array([0, 0])):
+            self._curr_state = 0
+        elif np.array_equal(self._agent_location, np.array([0, 1])):
+            self._curr_state = 4
+        elif np.array_equal(self._agent_location, np.array([0, 2])):
+            self._curr_state = 8
+        elif np.array_equal(self._agent_location, np.array([0, 3])):
+            self._curr_state = 12
+        elif np.array_equal(self._agent_location, np.array([1, 0])):
+            self._curr_state = 1
+        elif np.array_equal(self._agent_location, np.array([1, 1])):
+            self._curr_state = 5
+        elif np.array_equal(self._agent_location, np.array([1, 2])):
+            self._curr_state = 9
+        elif np.array_equal(self._agent_location, np.array([1, 3])):
+            self._curr_state = 13
+        elif np.array_equal(self._agent_location, np.array([2, 0])):
+            self._curr_state = 2
+        elif np.array_equal(self._agent_location, np.array([2, 1])):
+            self._curr_state = 6
+        elif np.array_equal(self._agent_location, np.array([2, 2])):
+            self._curr_state = 10
+        elif np.array_equal(self._agent_location, np.array([2, 3])):
+            self._curr_state = 14
+        elif np.array_equal(self._agent_location, np.array([3, 0])):
+            self._curr_state = 3
+        elif np.array_equal(self._agent_location, np.array([3, 1])):
+            self._curr_state = 7
+        elif np.array_equal(self._agent_location, np.array([3, 2])):
+            self._curr_state = 11
+        elif np.array_equal(self._agent_location, np.array([3, 2])):
+            self._curr_state = 15
 
         observation = self._get_obs()
 
@@ -263,8 +304,8 @@ class GoalVsHoleEnv(Env):
         episode = 1
         step = 0
 
-        print('\nQ-Table before training:')
-        env.print_q_table()
+        # print('\nQ-Table before training:')
+        # env.print_q_table()
 
         for i in tqdm(range(n)):
             # Plot the previous state and save it as an image that
@@ -278,6 +319,7 @@ class GoalVsHoleEnv(Env):
 
             rand = np.random.rand()
             while True:
+                # Random action
                 if rand < self.epsilon:
                     action_not_valid = True
                     while action_not_valid:
@@ -347,122 +389,121 @@ class GoalVsHoleEnv(Env):
                     # non-corner side states
                     elif self._curr_state in [1, 2]:
                         acts = [0, 1, 2]
-                        for a in range(2):
-                            if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                                action = acts[a]
-                            elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                                acts[a + 1]]:
-                                if random.randrange(2) == 0:
-                                    action = acts[a]
-                                else:
-                                    action = acts[a + 1]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
                             else:
-                                action = acts[a + 1]
+                                action = acts[2]
 
                     elif self._curr_state in [4, 8]:
                         acts = [0, 1, 3]
-                        for a in range(2):
-                            if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                                action = acts[a]
-                            elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                                acts[a + 1]]:
-                                if random.randrange(2) == 0:
-                                    action = acts[a]
-                                else:
-                                    action = acts[a + 1]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
                             else:
-                                action = acts[a + 1]
+                                action = acts[2]
 
                     elif self._curr_state in [7, 11]:
                         acts = [1, 2, 3]
-                        for a in range(2):
-                            if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                                action = acts[a]
-                            elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                                acts[a + 1]]:
-                                if random.randrange(2) == 0:
-                                    action = acts[a]
-                                else:
-                                    action = acts[a + 1]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
                             else:
-                                action = acts[a + 1]
+                                action = acts[2]
                     elif self._curr_state in [13, 14]:
                         acts = [0, 2, 3]
-                        if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                            action = acts[a]
-                        elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][acts[a + 1]]:
-                            if random.randrange(2) == 0:
-                                action = acts[a]
-                            else:
-                                action = acts[a + 1]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
                         else:
-                            action = acts[a + 1]
-                    else:
-                        for j in range(3):
-                            if self._q_table[self._curr_state][j] > self._q_table[self._curr_state][j + 1]:
-                                action = j
-                            elif self._q_table[self._curr_state][j] == self._q_table[self._curr_state][j + 1]:
-                                if random.randrange(2) == 0:
-                                    action = j
-                                else:
-                                    action = j + 1
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
                             else:
-                                action = j + 1
+                                action = acts[2]
+
+                    else:
+                        if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][0] > self._q_table[self._curr_state][2] and \
+                                self._q_table[self._curr_state][0] > self._q_table[self._curr_state][3]:
+                            action = 0
+                        elif self._q_table[self._curr_state][1] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][1] > self._q_table[self._curr_state][2] and \
+                                self._q_table[self._curr_state][1] > self._q_table[self._curr_state][3]:
+                            action = 1
+                        elif self._q_table[self._curr_state][2] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][2] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][2] > self._q_table[self._curr_state][3]:
+                            action = 2
+                        elif self._q_table[self._curr_state][3] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][3] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][3] > self._q_table[self._curr_state][2]:
+                            action = 3
+
+                        else:
+                            action = random.randrange(4)
+
 
                 observation, reward, terminated, truncated = env.step(action)
+                step += 1
+                if terminated or truncated:
+                    episode += 1
+                    step = 0
+                    observation, info = env.reset()
 
-                # update q-table
-                self._q_table[self._curr_state][action] = reward + self.gamma * np.amax(self._q_table[self._next_state])
-
-                # update agent_location
-                self._agent_location = self._agent_next_location
+                # print(self.epsilon)
+                # update epsilon
+                if self.epsilon > self.epsilon_min:
+                    self.epsilon *= self.epsilon_decay
+                else:
+                    self.epsilon = self.epsilon_min
 
                 if self._prev_state != self._next_state:
                     break
-
-            self._prev_state = self._curr_state
-            if np.array_equal(self._agent_location, np.array([0, 0])):
-                self._curr_state = 0
-            elif np.array_equal(self._agent_location, np.array([0, 1])):
-                self._curr_state = 4
-            elif np.array_equal(self._agent_location, np.array([0, 2])):
-                self._curr_state = 8
-            elif np.array_equal(self._agent_location, np.array([0, 3])):
-                self._curr_state = 12
-            elif np.array_equal(self._agent_location, np.array([1, 0])):
-                self._curr_state = 1
-            elif np.array_equal(self._agent_location, np.array([1, 1])):
-                self._curr_state = 5
-            elif np.array_equal(self._agent_location, np.array([1, 2])):
-                self._curr_state = 9
-            elif np.array_equal(self._agent_location, np.array([1, 3])):
-                self._curr_state = 13
-            elif np.array_equal(self._agent_location, np.array([2, 0])):
-                self._curr_state = 2
-            elif np.array_equal(self._agent_location, np.array([2, 1])):
-                self._curr_state = 6
-            elif np.array_equal(self._agent_location, np.array([2, 2])):
-                self._curr_state = 10
-            elif np.array_equal(self._agent_location, np.array([2, 3])):
-                self._curr_state = 14
-            elif np.array_equal(self._agent_location, np.array([3, 0])):
-                self._curr_state = 3
-            elif np.array_equal(self._agent_location, np.array([3, 1])):
-                self._curr_state = 7
-            elif np.array_equal(self._agent_location, np.array([3, 2])):
-                self._curr_state = 11
-            elif np.array_equal(self._agent_location, np.array([3, 2])):
-                self._curr_state = 15
-
-            step += 1
-            if terminated or truncated:
-                episode += 1
-                step = 0
-                observation, info = env.reset()
-
-            # update epsilon
-            if self.epsilon > self.epsilon_min:
-                self.epsilon *= self.epsilon_decay
 
     def test(self, n=50):
         episode = 1
@@ -474,190 +515,369 @@ class GoalVsHoleEnv(Env):
             # Plot the previous state and save it as an image that
             # will be later patched together as a .gif
             img = plt.imshow(env.render())
-            plt.title("Episode: {}, Step: {}\n Goals: {}, Holes: {}".format(episode, step, self.total_goals, self.total_holes))
+            plt.title("Episode: {}, Step: {}\n Goals: {}, Holes: {}".format(episode, step, self.total_goals,
+                                                                            self.total_holes))
             plt.axis('off')
             plt.savefig("./temp/{}.png".format(i))
             plt.close()
             filenames.append("./temp/{}.png".format(i))
 
             rand = np.random.rand()
-            # random action
-            if rand >= 0.9:
-                action_not_valid = True
-                while action_not_valid:
-                    '''
-                    0: right
-                    1: down
-                    2: left
-                    3: up
-                    '''
-                    action = env.action_space.sample()
-                    if self._curr_state == 0 and action in [0, 1]:
-                        action_not_valid = False
-                    elif self._curr_state == 3 and action in [1, 2]:
-                        action_not_valid = False
-                    elif self._curr_state == 12 and action in [0, 3]:
-                        action_not_valid = False
-                    elif self._curr_state == 15 and action in [2, 3]:
-                        action_not_valid = False
 
-                    elif self._curr_state in [1, 2] and action in [0, 1, 2]:
-                        action_not_valid = False
-                    elif self._curr_state in [4, 8] and action in [0, 1, 3]:
-                        action_not_valid = False
-                    elif self._curr_state in [7, 11] and action in [1, 2, 3]:
-                        action_not_valid = False
-                    elif self._curr_state in [13, 14] and action in [0, 2, 3]:
-                        action_not_valid = False
-                    elif self._curr_state in [5, 6, 9, 10]:
-                        action_not_valid = False
+            while True:
+                # random action
+                if rand >= 0.9:
+                    action_not_valid = True
+                    while action_not_valid:
+                        '''
+                        0: right
+                        1: down
+                        2: left
+                        3: up
+                        '''
+                        action = env.action_space.sample()
+                        if self._curr_state == 0 and action in [0, 1]:
+                            action_not_valid = False
+                        elif self._curr_state == 3 and action in [1, 2]:
+                            action_not_valid = False
+                        elif self._curr_state == 12 and action in [0, 3]:
+                            action_not_valid = False
+                        elif self._curr_state == 15 and action in [2, 3]:
+                            action_not_valid = False
 
-            # exploitative action; consult q-table
-            else:
-                # corners, restrict actions
-                if self._curr_state == 0:
-                    if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][1]:
-                        action = 0
-                    elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][1]:
-                        if random.randrange(2) == 0:
+                        elif self._curr_state in [1, 2] and action in [0, 1, 2]:
+                            action_not_valid = False
+                        elif self._curr_state in [4, 8] and action in [0, 1, 3]:
+                            action_not_valid = False
+                        elif self._curr_state in [7, 11] and action in [1, 2, 3]:
+                            action_not_valid = False
+                        elif self._curr_state in [13, 14] and action in [0, 2, 3]:
+                            action_not_valid = False
+                        elif self._curr_state in [5, 6, 9, 10]:
+                            action_not_valid = False
+
+                # exploitative action; consult q-table
+                else:
+                    # corners, restrict actions
+                    if self._curr_state == 0:
+                        if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][1]:
                             action = 0
+                        elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][1]:
+                            if random.randrange(2) == 0:
+                                action = 0
+                            else:
+                                action = 1
                         else:
                             action = 1
-                    else:
-                        action = 1
 
-                elif self._curr_state == 3:
-                    if self._q_table[self._curr_state][1] > self._q_table[self._curr_state][2]:
-                        action = 1
-                    elif self._q_table[self._curr_state][1] == self._q_table[self._curr_state][2]:
-                        if random.randrange(2) == 0:
+                    elif self._curr_state == 3:
+                        if self._q_table[self._curr_state][1] > self._q_table[self._curr_state][2]:
                             action = 1
+                        elif self._q_table[self._curr_state][1] == self._q_table[self._curr_state][2]:
+                            if random.randrange(2) == 0:
+                                action = 1
+                            else:
+                                action = 2
                         else:
                             action = 2
-                    else:
-                        action = 2
 
-                elif self._curr_state == 12:
-                    if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][3]:
-                        action = 0
-                    elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][3]:
-                        if random.randrange(2) == 0:
+                    elif self._curr_state == 12:
+                        if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][3]:
                             action = 0
+                        elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][3]:
+                            if random.randrange(2) == 0:
+                                action = 0
+                            else:
+                                action = 3
                         else:
                             action = 3
+
+                    # non-corner side states
+                    elif self._curr_state in [1, 2]:
+                        acts = [0, 1, 2]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
+                            else:
+                                action = acts[2]
+
+                    elif self._curr_state in [4, 8]:
+                        acts = [0, 1, 3]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
+                            else:
+                                action = acts[2]
+
+                    elif self._curr_state in [7, 11]:
+                        acts = [1, 2, 3]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
+                            else:
+                                action = acts[2]
+                    elif self._curr_state in [13, 14]:
+                        acts = [0, 2, 3]
+                        if self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[1]] and \
+                                self._q_table[self._curr_state][acts[0]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[0]
+                        elif self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[1]] > self._q_table[self._curr_state][acts[2]]:
+                            action = acts[1]
+                        elif self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[0]] and \
+                                self._q_table[self._curr_state][acts[2]] > self._q_table[self._curr_state][acts[1]]:
+                            action = acts[2]
+
+                        else:
+                            if random.randrange(3) == 0:
+                                action = acts[0]
+                            elif random.randrange(2) == 1:
+                                action = acts[1]
+                            else:
+                                action = acts[2]
+
                     else:
-                        action = 3
+                        if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][0] > self._q_table[self._curr_state][2] and \
+                                self._q_table[self._curr_state][0] > self._q_table[self._curr_state][3]:
+                            action = 0
+                        elif self._q_table[self._curr_state][1] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][1] > self._q_table[self._curr_state][2] and \
+                                self._q_table[self._curr_state][1] > self._q_table[self._curr_state][3]:
+                            action = 1
+                        elif self._q_table[self._curr_state][2] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][2] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][2] > self._q_table[self._curr_state][3]:
+                            action = 2
+                        elif self._q_table[self._curr_state][3] > self._q_table[self._curr_state][0] and \
+                                self._q_table[self._curr_state][3] > self._q_table[self._curr_state][1] and \
+                                self._q_table[self._curr_state][3] > self._q_table[self._curr_state][2]:
+                            action = 3
 
-                # non-corner side states
-                elif self._curr_state in [1, 2]:
-                    acts = [0, 1, 2]
-                    for a in range(2):
-                        if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                            action = acts[a]
-                        elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                            acts[a + 1]]:
-                            if random.randrange(2) == 0:
-                                action = acts[a]
-                            else:
-                                action = acts[a + 1]
                         else:
-                            action = acts[a + 1]
+                            action = random.randrange(4)
 
-                elif self._curr_state in [4, 8]:
-                    acts = [0, 1, 3]
-                    for a in range(2):
-                        if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                            action = acts[a]
-                        elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                            acts[a + 1]]:
-                            if random.randrange(2) == 0:
-                                action = acts[a]
-                            else:
-                                action = acts[a + 1]
-                        else:
-                            action = acts[a + 1]
+                observation, reward, terminated, truncated = env.step(action)
+                step += 1
+                if terminated or truncated:
+                    episode += 1
+                    step = 0
+                    observation, info = env.reset()
 
-                elif self._curr_state in [7, 11]:
-                    acts = [1, 2, 3]
-                    for a in range(2):
-                        if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                            action = acts[a]
-                        elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
-                            acts[a + 1]]:
-                            if random.randrange(2) == 0:
-                                action = acts[a]
-                            else:
-                                action = acts[a + 1]
-                        else:
-                            action = acts[a + 1]
-                elif self._curr_state in [13, 14]:
-                    acts = [0, 2, 3]
-                    if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
-                        action = acts[a]
-                    elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][acts[a + 1]]:
-                        if random.randrange(2) == 0:
-                            action = acts[a]
-                        else:
-                            action = acts[a + 1]
-                    else:
-                        action = acts[a + 1]
-                else:
-                    for j in range(3):
-                        if self._q_table[self._curr_state][j] > self._q_table[self._curr_state][j + 1]:
-                            action = j
-                        elif self._q_table[self._curr_state][j] == self._q_table[self._curr_state][j + 1]:
-                            if random.randrange(2) == 0:
-                                action = j
-                            else:
-                                action = j + 1
-                        else:
-                            action = j + 1
+                if self._prev_state != self._next_state:
+                    break
 
-            observation, reward, terminated, truncated = env.step(action)
-
-            # update agent_location
-            self._agent_location = self._agent_next_location
-
-            self._prev_state = self._curr_state
-            if np.array_equal(self._agent_location, np.array([0, 0])):
-                self._curr_state = 0
-            elif np.array_equal(self._agent_location, np.array([0, 1])):
-                self._curr_state = 4
-            elif np.array_equal(self._agent_location, np.array([0, 2])):
-                self._curr_state = 8
-            elif np.array_equal(self._agent_location, np.array([0, 3])):
-                self._curr_state = 12
-            elif np.array_equal(self._agent_location, np.array([1, 0])):
-                self._curr_state = 1
-            elif np.array_equal(self._agent_location, np.array([1, 1])):
-                self._curr_state = 5
-            elif np.array_equal(self._agent_location, np.array([1, 2])):
-                self._curr_state = 9
-            elif np.array_equal(self._agent_location, np.array([1, 3])):
-                self._curr_state = 13
-            elif np.array_equal(self._agent_location, np.array([2, 0])):
-                self._curr_state = 2
-            elif np.array_equal(self._agent_location, np.array([2, 1])):
-                self._curr_state = 6
-            elif np.array_equal(self._agent_location, np.array([2, 2])):
-                self._curr_state = 10
-            elif np.array_equal(self._agent_location, np.array([2, 3])):
-                self._curr_state = 14
-            elif np.array_equal(self._agent_location, np.array([3, 0])):
-                self._curr_state = 3
-            elif np.array_equal(self._agent_location, np.array([3, 1])):
-                self._curr_state = 7
-            elif np.array_equal(self._agent_location, np.array([3, 2])):
-                self._curr_state = 11
-            elif np.array_equal(self._agent_location, np.array([3, 2])):
-                self._curr_state = 15
-
-
-            step += 1
-            if terminated or truncated:
-                episode += 1
-                step = 0
-                observation, info = env.reset()
+            #     action_not_valid = True
+            #     while action_not_valid:
+            #         '''
+            #         0: right
+            #         1: down
+            #         2: left
+            #         3: up
+            #         '''
+            #         action = env.action_space.sample()
+            #         if self._curr_state == 0 and action in [0, 1]:
+            #             action_not_valid = False
+            #         elif self._curr_state == 3 and action in [1, 2]:
+            #             action_not_valid = False
+            #         elif self._curr_state == 12 and action in [0, 3]:
+            #             action_not_valid = False
+            #         elif self._curr_state == 15 and action in [2, 3]:
+            #             action_not_valid = False
+            #
+            #         elif self._curr_state in [1, 2] and action in [0, 1, 2]:
+            #             action_not_valid = False
+            #         elif self._curr_state in [4, 8] and action in [0, 1, 3]:
+            #             action_not_valid = False
+            #         elif self._curr_state in [7, 11] and action in [1, 2, 3]:
+            #             action_not_valid = False
+            #         elif self._curr_state in [13, 14] and action in [0, 2, 3]:
+            #             action_not_valid = False
+            #         elif self._curr_state in [5, 6, 9, 10]:
+            #             action_not_valid = False
+            #
+            # # exploitative action; consult q-table
+            # else:
+            #     # corners, restrict actions
+            #     if self._curr_state == 0:
+            #         if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][1]:
+            #             action = 0
+            #         elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][1]:
+            #             if random.randrange(2) == 0:
+            #                 action = 0
+            #             else:
+            #                 action = 1
+            #         else:
+            #             action = 1
+            #
+            #     elif self._curr_state == 3:
+            #         if self._q_table[self._curr_state][1] > self._q_table[self._curr_state][2]:
+            #             action = 1
+            #         elif self._q_table[self._curr_state][1] == self._q_table[self._curr_state][2]:
+            #             if random.randrange(2) == 0:
+            #                 action = 1
+            #             else:
+            #                 action = 2
+            #         else:
+            #             action = 2
+            #
+            #     elif self._curr_state == 12:
+            #         if self._q_table[self._curr_state][0] > self._q_table[self._curr_state][3]:
+            #             action = 0
+            #         elif self._q_table[self._curr_state][0] == self._q_table[self._curr_state][3]:
+            #             if random.randrange(2) == 0:
+            #                 action = 0
+            #             else:
+            #                 action = 3
+            #         else:
+            #             action = 3
+            #
+            #     # non-corner side states
+            #     elif self._curr_state in [1, 2]:
+            #         acts = [0, 1, 2]
+            #         for a in range(2):
+            #             if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
+            #                 action = acts[a]
+            #             elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
+            #                 acts[a + 1]]:
+            #                 if random.randrange(2) == 0:
+            #                     action = acts[a]
+            #                 else:
+            #                     action = acts[a + 1]
+            #             else:
+            #                 action = acts[a + 1]
+            #
+            #     elif self._curr_state in [4, 8]:
+            #         acts = [0, 1, 3]
+            #         for a in range(2):
+            #             if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
+            #                 action = acts[a]
+            #             elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
+            #                 acts[a + 1]]:
+            #                 if random.randrange(2) == 0:
+            #                     action = acts[a]
+            #                 else:
+            #                     action = acts[a + 1]
+            #             else:
+            #                 action = acts[a + 1]
+            #
+            #     elif self._curr_state in [7, 11]:
+            #         acts = [1, 2, 3]
+            #         for a in range(2):
+            #             if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
+            #                 action = acts[a]
+            #             elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][
+            #                 acts[a + 1]]:
+            #                 if random.randrange(2) == 0:
+            #                     action = acts[a]
+            #                 else:
+            #                     action = acts[a + 1]
+            #             else:
+            #                 action = acts[a + 1]
+            #     elif self._curr_state in [13, 14]:
+            #         acts = [0, 2, 3]
+            #         if self._q_table[self._curr_state][acts[a]] > self._q_table[self._curr_state][acts[a + 1]]:
+            #             action = acts[a]
+            #         elif self._q_table[self._curr_state][acts[a]] == self._q_table[self._curr_state][acts[a + 1]]:
+            #             if random.randrange(2) == 0:
+            #                 action = acts[a]
+            #             else:
+            #                 action = acts[a + 1]
+            #         else:
+            #             action = acts[a + 1]
+            #     else:
+            #         for j in range(3):
+            #             if self._q_table[self._curr_state][j] > self._q_table[self._curr_state][j + 1]:
+            #                 action = j
+            #             elif self._q_table[self._curr_state][j] == self._q_table[self._curr_state][j + 1]:
+            #                 if random.randrange(2) == 0:
+            #                     action = j
+            #                 else:
+            #                     action = j + 1
+            #             else:
+            #                 action = j + 1
+            #
+            # observation, reward, terminated, truncated = env.step(action)
+            #
+            # # update agent_location
+            # self._agent_location = self._agent_next_location
+            #
+            # self._prev_state = self._curr_state
+            # if np.array_equal(self._agent_location, np.array([0, 0])):
+            #     self._curr_state = 0
+            # elif np.array_equal(self._agent_location, np.array([0, 1])):
+            #     self._curr_state = 4
+            # elif np.array_equal(self._agent_location, np.array([0, 2])):
+            #     self._curr_state = 8
+            # elif np.array_equal(self._agent_location, np.array([0, 3])):
+            #     self._curr_state = 12
+            # elif np.array_equal(self._agent_location, np.array([1, 0])):
+            #     self._curr_state = 1
+            # elif np.array_equal(self._agent_location, np.array([1, 1])):
+            #     self._curr_state = 5
+            # elif np.array_equal(self._agent_location, np.array([1, 2])):
+            #     self._curr_state = 9
+            # elif np.array_equal(self._agent_location, np.array([1, 3])):
+            #     self._curr_state = 13
+            # elif np.array_equal(self._agent_location, np.array([2, 0])):
+            #     self._curr_state = 2
+            # elif np.array_equal(self._agent_location, np.array([2, 1])):
+            #     self._curr_state = 6
+            # elif np.array_equal(self._agent_location, np.array([2, 2])):
+            #     self._curr_state = 10
+            # elif np.array_equal(self._agent_location, np.array([2, 3])):
+            #     self._curr_state = 14
+            # elif np.array_equal(self._agent_location, np.array([3, 0])):
+            #     self._curr_state = 3
+            # elif np.array_equal(self._agent_location, np.array([3, 1])):
+            #     self._curr_state = 7
+            # elif np.array_equal(self._agent_location, np.array([3, 2])):
+            #     self._curr_state = 11
+            # elif np.array_equal(self._agent_location, np.array([3, 2])):
+            #     self._curr_state = 15
+            #
+            #
+            # step += 1
+            # if terminated or truncated:
+            #     episode += 1
+            #     step = 0
+            #     observation, info = env.reset()
 
 
 '''
