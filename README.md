@@ -1,5 +1,4 @@
 # Goal vs Hole-v1, Chris Hoole
-### Note: a significant amount of the program was copied from Dr. B and the resources provided.
 
 The program first trains the RL model by randomly traversing the grid for 1000 steps, recording the reward collected
 at each given step with the addition of a discounted max-reward at the next step, all entered into a 'state' x 'action'
